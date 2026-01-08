@@ -1,204 +1,167 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Book My Seaweed</title>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-  <style>
-    body { font-family: Arial; background: #e6f7f4; text-align:center; padding:40px;}
-    .box { background:white; padding:25px; max-width:500px; margin:auto; border-radius:10px; box-shadow:0 4px 10px rgba(0,0,0,0.1);}
-    input, button { width:95%; padding:12px; margin:8px 0; font-size:16px;}
-    button { background:#0a5c5a; color:white; border:none; border-radius:6px; cursor:pointer;}
-    button.secondary { background:#555;}
-    .hidden{ display:none;}
-    table{ width:100%; border-collapse:collapse; margin-top:15px;}
-    table, th, td{ border:1px solid #0a5c5a; padding:8px;}
-    th{ background:#0a5c5a; color:white;}
-  </style>
+<meta charset="UTF-8">
+<title>Book My Seaweed</title>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<style>
+body { font-family: Arial; background: #e6f7f4; text-align:center; padding:40px;}
+.box { background:white; padding:25px; max-width:500px; margin:auto; border-radius:10px; box-shadow:0 4px 10px rgba(0,0,0,0.1);}
+input, button { width:95%; padding:12px; margin:8px 0; font-size:16px;}
+button { background:#0a5c5a; color:white; border:none; border-radius:6px; cursor:pointer;}
+button.secondary { background:#555;}
+.hidden{ display:none;}
+table{ width:100%; border-collapse:collapse; margin-top:15px;}
+table, th, td{ border:1px solid #0a5c5a; padding:8px;}
+th{ background:#0a5c5a; color:white;}
+</style>
 </head>
 <body>
 
-<!-- LOGIN -->
-<div id="loginBox" class="box">
-  <h2>Login</h2>
-  <input id="loginEmail" type="email" placeholder="Email">
-  <input id="loginPassword" type="password" placeholder="Password">
-  <button onclick="loginEmail()">Login</button>
-  <hr>
-  <button onclick="loginGoogle()">Continue with Google</button>
-  <p>Don't have an account?</p>
-  <button class="secondary" onclick="showSignup()">Create Account</button>
-</div>
-
-<!-- SIGN UP -->
-<div id="signupBox" class="box hidden">
-  <h2>Create Account</h2>
-  <input id="signupName" type="text" placeholder="Full Name">
-  <input id="signupEmail" type="email" placeholder="Email">
-  <input id="signupPassword" type="password" placeholder="Password">
-  <button onclick="signup()">Sign Up with Email</button>
-  <hr>
-  <p>Or continue with Google (type your name below first)</p>
-  <button onclick="signupGoogle()">Continue with Google</button>
-  <p>Already have an account?</p>
-  <button class="secondary" onclick="showLogin()">Back to Login</button>
+<!-- SIGN UP / LOGIN -->
+<div id="signupBox" class="box">
+<h2>Sign Up / Login</h2>
+<input id="signupName" type="text" placeholder="Full Name">
+<input id="signupEmail" type="email" placeholder="Email">
+<input id="signupPassword" type="password" placeholder="Password (for Email signup)">
+<button onclick="signupEmail()">Sign Up with Email</button>
+<hr>
+<p>Or Sign Up with Google (Type Name above first)</p>
+<button onclick="signupGoogle()">Sign Up with Google</button>
+<hr>
+<p>Already have an account?</p>
+<input id="loginEmail" type="email" placeholder="Email">
+<input id="loginPassword" type="password" placeholder="Password">
+<button onclick="loginEmail()">Login with Email</button>
+<button onclick="loginGoogle()">Login with Google</button>
 </div>
 
 <!-- MAIN SITE -->
 <div id="site" class="box hidden">
-  <h2>Book My Seaweed</h2>
-  <p id="welcome"></p>
+<h2>Book My Seaweed</h2>
+<p id="welcome"></p>
 
-  <!-- Booking table -->
-  <h3>Booking Status (1 slot per day)</h3>
-  <table>
-    <tr>
-      <th>Day</th>
-      <th>Booked By</th>
-      <th>Action</th>
-    </tr>
-    <tr>
-      <td>Tuesday</td>
-      <td id="tuesdaySlot">Available</td>
-      <td><button onclick="bookDay('Tuesday')">Book</button></td>
-    </tr>
-    <tr>
-      <td>Thursday</td>
-      <td id="thursdaySlot">Available</td>
-      <td><button onclick="bookDay('Thursday')">Book</button></td>
-    </tr>
-  </table>
+<h3>Booking Table</h3>
+<table>
+<tr><th>Day</th><th>Booked By</th><th>Action</th></tr>
+<tr><td>Tuesday</td><td id="tuesdaySlot">Available</td><td><button onclick="bookDay('Tuesday')">Book</button></td></tr>
+<tr><td>Thursday</td><td id="thursdaySlot">Available</td><td><button onclick="bookDay('Thursday')">Book</button></td></tr>
+</table>
 
-  <p id="message" style="font-weight:bold; margin-top:15px;"></p>
+<p id="message" style="font-weight:bold; margin-top:15px;"></p>
 
-  <hr>
+<h3>Booking Log (First come, first served, max 8)</h3>
+<table>
+<tr><th>#</th><th>Name / Email</th><th>Day</th></tr>
+<tbody id="bookingLog"></tbody>
+</table>
 
-  <h3>Booking Log (Max 8, First Come First Served)</h3>
-  <table>
-    <tr>
-      <th>#</th>
-      <th>Name / Email</th>
-      <th>Day</th>
-    </tr>
-    <tbody id="bookingLog"></tbody>
-  </table>
-
-  <br>
-  <button class="secondary" onclick="logout()">Logout</button>
+<br>
+<button class="secondary" onclick="logout()">Logout</button>
 </div>
 
 <script>
-  // Firebase config
-  const firebaseConfig = {
-    apiKey: "AIzaSyA4txYmTD_fOvcMBmwZxWJfGn4TZFMZARM",
-    authDomain: "fir-969c9.firebaseapp.com",
-    projectId: "fir-969c9",
-    messagingSenderId: "204881578678",
-    appId: "1:204881578678:web:153f8349b5774bcfe97417"
-  };
+const firebaseConfig = {
+  apiKey: "AIzaSyA4txYmTD_fOvcMBmwZxWJfGn4TZFMZARM",
+  authDomain: "fir-969c9.firebaseapp.com",
+  projectId: "fir-969c9",
+  messagingSenderId: "204881578678",
+  appId: "1:204881578678:web:153f8349b5774bcfe97417"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+let currentUser=null;
 
-  firebase.initializeApp(firebaseConfig);
-  const auth = firebase.auth();
-  const db = firebase.firestore();
+// Email Sign Up
+function signupEmail(){
+  const name=document.getElementById("signupName").value.trim();
+  const email=document.getElementById("signupEmail").value.trim();
+  const password=document.getElementById("signupPassword").value;
+  if(!name || !email || !password){ alert("All fields required"); return; }
+  auth.createUserWithEmailAndPassword(email,password)
+      .then(res=>res.user.updateProfile({displayName:name}))
+      .catch(err=>alert(err.message));
+}
 
-  let currentUser = null;
+// Google Sign Up
+function signupGoogle(){
+  const name=document.getElementById("signupName").value.trim();
+  if(!name){ alert("Type your name first"); return; }
+  const provider=new firebase.auth.GoogleAuthProvider();
+  auth.signInWithPopup(provider)
+      .then(res=>res.user.updateProfile({displayName:name}))
+      .catch(()=>alert("Google login blocked by browser"));
+}
 
-  function showSignup() { loginBox.classList.add("hidden"); signupBox.classList.remove("hidden"); }
-  function showLogin() { signupBox.classList.add("hidden"); loginBox.classList.remove("hidden"); }
+// Login Email
+function loginEmail(){
+  const email=document.getElementById("loginEmail").value.trim();
+  const password=document.getElementById("loginPassword").value;
+  if(!email||!password){ alert("Enter login credentials"); return; }
+  auth.signInWithEmailAndPassword(email,password).catch(err=>alert(err.message));
+}
 
-  // Email login
-  function loginEmail() {
-    auth.signInWithEmailAndPassword(loginEmail.value, loginPassword.value)
-      .catch(err => alert(err.message));
+// Login Google
+function loginGoogle(){
+  const provider=new firebase.auth.GoogleAuthProvider();
+  auth.signInWithPopup(provider).catch(()=>alert("Google login blocked by browser"));
+}
+
+// Auth State
+auth.onAuthStateChanged(user=>{
+  if(user){
+    currentUser=user;
+    document.getElementById("signupBox").classList.add("hidden");
+    document.getElementById("site").classList.remove("hidden");
+    document.getElementById("welcome").innerText="Welcome, "+(user.displayName||user.email);
+    loadBookings();
+  } else {
+    document.getElementById("signupBox").classList.remove("hidden");
+    document.getElementById("site").classList.add("hidden");
   }
+});
 
-  // Email/Password Sign Up
-  function signup() {
-    const name = signupName.value.trim();
-    if(!name){ alert("Name required"); return; }
-
-    auth.createUserWithEmailAndPassword(signupEmail.value, signupPassword.value)
-      .then(result => result.user.updateProfile({ displayName: name }))
-      .catch(err => alert(err.message));
-  }
-
-  // Google login for login page
-  function loginGoogle(){
-    const provider = new firebase.auth.GoogleAuthProvider();
-    auth.signInWithPopup(provider).catch(()=>alert("Google login blocked by browser"));
-  }
-
-  // Google login for sign up (requires name typed)
-  function signupGoogle(){
-    const name = signupName.value.trim();
-    if(!name){ alert("Please type your name before using Google login"); return; }
-    const provider = new firebase.auth.GoogleAuthProvider();
-    auth.signInWithPopup(provider).then(result=>{
-      result.user.updateProfile({displayName: name});
-    }).catch(()=>alert("Google login blocked by browser"));
-  }
-
-  // Auth state
-  auth.onAuthStateChanged(user=>{
-    if(user){
-      currentUser = user;
-      loginBox.classList.add("hidden");
-      signupBox.classList.add("hidden");
-      site.classList.remove("hidden");
-      welcome.innerText = "Welcome, "+(user.displayName || user.email);
-      loadBookings();
-    } else {
-      loginBox.classList.remove("hidden");
-      signupBox.classList.add("hidden");
-      site.classList.add("hidden");
-    }
+// Load bookings
+function loadBookings(){
+  db.collection("bookings").orderBy("time","asc").limit(8).onSnapshot(snapshot=>{
+    const log=document.getElementById("bookingLog");
+    log.innerHTML="";
+    let tuesdayBooked=false, thursdayBooked=false;
+    snapshot.docs.forEach((doc,index)=>{
+      const data=doc.data();
+      const displayName=data.name||data.email;
+      log.innerHTML+=`<tr><td>${index+1}</td><td>${displayName}</td><td>${data.day}</td></tr>`;
+      if(data.day==="Tuesday"){ tuesdayBooked=true; document.getElementById("tuesdaySlot").innerText=displayName; }
+      if(data.day==="Thursday"){ thursdayBooked=true; document.getElementById("thursdaySlot").innerText=displayName; }
+    });
+    if(!tuesdayBooked) document.getElementById("tuesdaySlot").innerText="Available";
+    if(!thursdayBooked) document.getElementById("thursdaySlot").innerText="Available";
   });
+}
 
-  // Load bookings table
-  function loadBookings(){
-    db.collection("bookings").orderBy("time","asc").limit(8).onSnapshot(snapshot=>{
-      const log = document.getElementById("bookingLog");
-      log.innerHTML = "";
-      let tuesdayBooked=false, thursdayBooked=false;
+// Book a day
+function bookDay(day){
+  if(!currentUser){ alert("Login first"); return; }
+  const name=currentUser.displayName||currentUser.email;
+  db.collection("bookings").get().then(snapshot=>{
+    if(snapshot.size>=8){ alert("Booking limit reached"); return; }
+    const alreadyBooked=snapshot.docs.some(doc=>doc.data().day===day);
+    if(alreadyBooked){ alert(day+" already booked"); return; }
+    db.collection("bookings").add({
+      email:currentUser.email,
+      name:name,
+      day:day,
+      time:firebase.firestore.FieldValue.serverTimestamp()
+    }).then(()=>document.getElementById("message").innerText="You booked "+day);
+  });
+}
 
-      snapshot.docs.forEach((doc,index)=>{
-        const data = doc.data();
-        const displayName = data.name || data.email;
-        log.innerHTML+=`<tr><td>${index+1}</td><td>${displayName}</td><td>${data.day}</td></tr>`;
-        if(data.day==="Tuesday"){ tuesdayBooked=true; document.getElementById("tuesdaySlot").innerText=displayName; }
-        if(data.day==="Thursday"){ thursdayBooked=true; document.getElementById("thursdaySlot").innerText=displayName; }
-      });
-
-      if(!tuesdayBooked) document.getElementById("tuesdaySlot").innerText="Available";
-      if(!thursdayBooked) document.getElementById("thursdaySlot").innerText="Available";
-    });
-  }
-
-  // Booking function (first come first served)
-  function bookDay(day){
-    if(!currentUser){ alert("Login first"); return; }
-
-    const name = currentUser.displayName || currentUser.email;
-
-    db.collection("bookings").get().then(snapshot=>{
-      if(snapshot.size>=8){ alert("Booking limit reached (8)"); return; }
-
-      const alreadyBooked = snapshot.docs.some(doc=>doc.data().day===day);
-      if(alreadyBooked){ alert(day+" is already booked"); return; }
-
-      db.collection("bookings").add({
-        email: currentUser.email,
-        name: name,
-        day: day,
-        time: firebase.firestore.FieldValue.serverTimestamp()
-      }).then(()=>document.getElementById("message").innerText="You booked "+day);
-    });
-  }
-
-  function logout(){ auth.signOut().then(()=>location.reload()); }
-
+// Logout
+function logout(){ auth.signOut().then(()=>location.reload()); }
 </script>
 </body>
 </html>
+
