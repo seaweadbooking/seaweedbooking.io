@@ -7,6 +7,7 @@
   <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
   <style>
     body {
@@ -19,7 +20,7 @@
     .box {
       background: white;
       padding: 25px;
-      max-width: 420px;
+      max-width: 500px;
       margin: auto;
       border-radius: 10px;
       box-shadow: 0 4px 10px rgba(0,0,0,0.1);
@@ -44,13 +45,20 @@
       background: #555;
     }
 
-    .hidden {
-      display: none;
+    .hidden { display: none; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
     }
 
-    h2 {
-      color: #0a5c5a;
+    table, th, td {
+      border: 1px solid #0a5c5a;
+      padding: 8px;
     }
+
+    th { background-color: #0a5c5a; color: white; }
   </style>
 </head>
 <body>
@@ -58,16 +66,11 @@
 <!-- LOGIN -->
 <div id="loginBox" class="box">
   <h2>Login</h2>
-
   <input id="loginEmail" type="email" placeholder="Email">
   <input id="loginPassword" type="password" placeholder="Password">
-
   <button onclick="loginEmail()">Login</button>
-
   <hr>
-
   <button onclick="loginGoogle()">Continue with Google</button>
-
   <p>Don't have an account?</p>
   <button class="secondary" onclick="showSignup()">Create Account</button>
 </div>
@@ -75,13 +78,10 @@
 <!-- SIGN UP -->
 <div id="signupBox" class="box hidden">
   <h2>Create Account</h2>
-
   <input id="signupName" type="text" placeholder="Full Name">
   <input id="signupEmail" type="email" placeholder="Email">
   <input id="signupPassword" type="password" placeholder="Password">
-
   <button onclick="signup()">Sign Up</button>
-
   <p>Already have an account?</p>
   <button class="secondary" onclick="showLogin()">Back to Login</button>
 </div>
@@ -91,16 +91,46 @@
   <h2>🌊 Book My Seaweed</h2>
   <p id="welcome"></p>
 
-  <button onclick="book('Tuesday')">Book Tuesday</button>
-  <button onclick="book('Thursday')">Book Thursday</button>
+  <!-- Booking table -->
+  <h3>Booking Status (1 slot per day)</h3>
+  <table>
+    <tr>
+      <th>Day</th>
+      <th>Booked By</th>
+      <th>Action</th>
+    </tr>
+    <tr>
+      <td>Tuesday</td>
+      <td id="tuesdaySlot">Available</td>
+      <td><button onclick="bookDay('Tuesday')">Book</button></td>
+    </tr>
+    <tr>
+      <td>Thursday</td>
+      <td id="thursdaySlot">Available</td>
+      <td><button onclick="bookDay('Thursday')">Book</button></td>
+    </tr>
+  </table>
 
-  <p id="message"></p>
+  <p id="message" style="font-weight:bold; margin-top:15px;"></p>
 
+  <hr>
+
+  <h3>Booking Log (Max 8)</h3>
+  <table>
+    <tr>
+      <th>#</th>
+      <th>Email</th>
+      <th>Day</th>
+    </tr>
+    <tbody id="bookingLog"></tbody>
+  </table>
+
+  <br>
   <button class="secondary" onclick="logout()">Logout</button>
 </div>
 
 <script>
-  // 🔥 Firebase config
+  // Firebase config
   const firebaseConfig = {
     apiKey: "AIzaSyA4txYmTD_fOvcMBmwZxWJfGn4TZFMZARM",
     authDomain: "fir-969c9.firebaseapp.com",
@@ -111,13 +141,15 @@
 
   firebase.initializeApp(firebaseConfig);
   const auth = firebase.auth();
+  const db = firebase.firestore();
 
-  // UI helpers
+  let currentUser = null;
+
+  // Show/hide login/signup
   function showSignup() {
     loginBox.classList.add("hidden");
     signupBox.classList.remove("hidden");
   }
-
   function showLogin() {
     signupBox.classList.add("hidden");
     loginBox.classList.remove("hidden");
@@ -133,43 +165,92 @@
 
   // Signup
   function signup() {
-    if (!signupName.value) {
-      alert("Name required");
-      return;
-    }
+    if (!signupName.value) { alert("Name required"); return; }
 
     auth.createUserWithEmailAndPassword(
       signupEmail.value,
       signupPassword.value
     ).then(result => {
-      result.user.updateProfile({
-        displayName: signupName.value
-      });
+      result.user.updateProfile({ displayName: signupName.value });
     }).catch(err => alert(err.message));
   }
 
-  // Google login (optional)
+  // Google login
   function loginGoogle() {
     const provider = new firebase.auth.GoogleAuthProvider();
-    auth.signInWithPopup(provider)
-      .catch(() => alert("Google login blocked by browser"));
+    auth.signInWithPopup(provider).catch(() => alert("Google login blocked by browser"));
   }
 
   // Auth state
   auth.onAuthStateChanged(user => {
     if (user) {
+      currentUser = user;
       loginBox.classList.add("hidden");
       signupBox.classList.add("hidden");
       site.classList.remove("hidden");
-
-      welcome.innerText =
-        "Welcome, " + (user.displayName || user.email);
+      welcome.innerText = "Welcome, " + (user.displayName || user.email);
+      loadBookings();
+    } else {
+      loginBox.classList.remove("hidden");
+      signupBox.classList.add("hidden");
+      site.classList.add("hidden");
     }
   });
 
-  // Booking
-  function book(day) {
-    message.innerText = "✅ Seaweed booked for " + day;
+  // Load bookings
+  function loadBookings() {
+    db.collection("bookings")
+      .orderBy("time", "asc")
+      .limit(8)
+      .onSnapshot(snapshot => {
+        const log = document.getElementById("bookingLog");
+        log.innerHTML = "";
+
+        let tuesdayBooked = false;
+        let thursdayBooked = false;
+
+        snapshot.docs.forEach((doc, index) => {
+          const data = doc.data();
+          log.innerHTML += `<tr>
+            <td>${index + 1}</td>
+            <td>${data.email}</td>
+            <td>${data.day}</td>
+          </tr>`;
+
+          if (data.day === "Tuesday") {
+            tuesdayBooked = true;
+            document.getElementById("tuesdaySlot").innerText = data.email;
+          }
+
+          if (data.day === "Thursday") {
+            thursdayBooked = true;
+            document.getElementById("thursdaySlot").innerText = data.email;
+          }
+        });
+
+        if (!tuesdayBooked) document.getElementById("tuesdaySlot").innerText = "Available";
+        if (!thursdayBooked) document.getElementById("thursdaySlot").innerText = "Available";
+      });
+  }
+
+  // Booking function
+  function bookDay(day) {
+    if (!currentUser) { alert("Login first"); return; }
+
+    db.collection("bookings").get().then(snapshot => {
+      if (snapshot.size >= 8) { alert("Booking limit reached (8)"); return; }
+
+      const alreadyBooked = snapshot.docs.some(doc => doc.data().day === day);
+      if (alreadyBooked) { alert(day + " is already booked"); return; }
+
+      db.collection("bookings").add({
+        email: currentUser.email,
+        day: day,
+        time: firebase.firestore.FieldValue.serverTimestamp()
+      }).then(() => {
+        document.getElementById("message").innerText = "✅ You booked " + day;
+      });
+    });
   }
 
   // Logout
@@ -180,6 +261,7 @@
 
 </body>
 </html>
+
 
 
 
