@@ -1,167 +1,120 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
   <meta charset="UTF-8">
   <title>Book My Seaweed</title>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+
   <style>
     body {
-      font-family: Arial, sans-serif;
-      background-color: #e6f7f4;
+      font-family: Arial;
+      background: #e6f7f4;
       text-align: center;
       padding: 40px;
     }
-
     .box {
       background: white;
       padding: 30px;
-      max-width: 380px;
+      max-width: 420px;
       margin: auto;
       border-radius: 12px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
     }
-
-    h1, h2 {
-      color: #0a5c5a;
-    }
-
-    input {
-      width: 90%;
-      padding: 10px;
+    button {
+      padding: 12px;
+      width: 100%;
       margin: 10px 0;
       font-size: 16px;
-    }
-
-    button {
-      padding: 12px 20px;
-      font-size: 16px;
-      background-color: #0a5c5a;
+      background: #0a5c5a;
       color: white;
       border: none;
       border-radius: 6px;
       cursor: pointer;
-      margin: 8px 0;
-      width: 95%;
     }
-
-    button:hover {
-      background-color: #08706d;
-    }
-
-    .secondary {
-      background-color: #555;
-    }
-
-    .hidden {
-      display: none;
-    }
+    .hidden { display: none; }
   </style>
 </head>
 <body>
 
-<!-- LOGIN -->
-<div id="loginBox" class="box">
+<div id="login" class="box">
   <h2>Login</h2>
-  <input id="loginUser" placeholder="Username">
-  <input id="loginPass" type="password" placeholder="Password">
-  <button onclick="login()">Login</button>
 
-  <button onclick="showSignup()">➕ Create an Account</button>
-  <p id="loginError" style="color:red;"></p>
+  <button onclick="googleLogin()">🔐 Continue with Google</button>
+
+  <hr>
+
+  <input id="email" placeholder="Email" style="width:95%;padding:10px;">
+  <br><br>
+  <label>
+    <input type="checkbox" id="notify">
+    Send Notification About Seaweed Booking
+  </label>
 </div>
 
-<!-- SIGN UP -->
-<div id="signupBox" class="box hidden">
-  <h2>Sign Up</h2>
-  <input id="signupUser" placeholder="Username">
-  <input id="signupPass" type="password" placeholder="Password">
-  <button onclick="signup()">Create Account</button>
-
-  <button class="secondary" onclick="showLogin()">⬅ Back to Login</button>
-  <p id="signupError" style="color:red;"></p>
-</div>
-
-<!-- MAIN SITE -->
 <div id="site" class="hidden">
   <h1>🌊 Book My Seaweed</h1>
-  <p>Welcome, <strong><span id="user"></span></strong>!</p>
+  <p id="userEmail"></p>
 
   <button onclick="book('Tuesday')">Book Tuesday</button>
   <button onclick="book('Thursday')">Book Thursday</button>
 
-  <p id="message" style="font-weight:bold;"></p>
-  <br>
-
-  <button class="secondary" onclick="logout()">Logout</button>
+  <p id="message"></p>
+  <button onclick="logout()">Logout</button>
 </div>
 
 <script>
-  let users = JSON.parse(localStorage.getItem("users")) || {};
+  // 🔥 REPLACE WITH YOUR FIREBASE CONFIG
+  const firebaseConfig = {
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_PROJECT.firebaseapp.com",
+    projectId: "YOUR_PROJECT_ID",
+    appId: "YOUR_APP_ID"
+  };
 
-  const loggedUser = localStorage.getItem("loggedInUser");
-  if (loggedUser) {
-    showSite(loggedUser);
-  }
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
 
-  function signup() {
-    const u = document.getElementById("signupUser").value.trim();
-    const p = document.getElementById("signupPass").value.trim();
+  auth.onAuthStateChanged(user => {
+    if (user) {
+      document.getElementById("login").style.display = "none";
+      document.getElementById("site").classList.remove("hidden");
+      document.getElementById("userEmail").innerText = user.email;
+    }
+  });
 
-    if (!u || !p) {
-      document.getElementById("signupError").innerText = "Please fill all fields";
+  function googleLogin() {
+    const email = document.getElementById("email").value;
+    const notify = document.getElementById("notify").checked;
+
+    if (!email) {
+      alert("Email is required");
       return;
     }
 
-    if (users[u]) {
-      document.getElementById("signupError").innerText = "Username already exists";
-      return;
-    }
+    localStorage.setItem("notify", notify);
+    localStorage.setItem("email", email);
 
-    users[u] = p;
-    localStorage.setItem("users", JSON.stringify(users));
-    alert("Account created! Please log in.");
-    showLogin();
-  }
-
-  function login() {
-    const u = document.getElementById("loginUser").value.trim();
-    const p = document.getElementById("loginPass").value.trim();
-
-    if (users[u] && users[u] === p) {
-      localStorage.setItem("loggedInUser", u);
-      showSite(u);
-    } else {
-      document.getElementById("loginError").innerText = "Invalid username or password";
-    }
-  }
-
-  function showSite(user) {
-    document.getElementById("loginBox").style.display = "none";
-    document.getElementById("signupBox").style.display = "none";
-    document.getElementById("site").classList.remove("hidden");
-    document.getElementById("user").innerText = user;
+    const provider = new firebase.auth.GoogleAuthProvider();
+    auth.signInWithPopup(provider);
   }
 
   function logout() {
-    localStorage.removeItem("loggedInUser");
+    auth.signOut();
     location.reload();
   }
 
-  function showSignup() {
-    document.getElementById("loginBox").style.display = "none";
-    document.getElementById("signupBox").classList.remove("hidden");
-  }
-
-  function showLogin() {
-    document.getElementById("signupBox").style.display = "none";
-    document.getElementById("loginBox").style.display = "block";
-  }
-
   function book(day) {
+    const notify = localStorage.getItem("notify") === "true";
     document.getElementById("message").innerText =
-      "✅ Seaweed booked for " + day + "!";
+      notify
+        ? `✅ Seaweed booked for ${day}. Notification will be sent.`
+        : `✅ Seaweed booked for ${day}.`;
   }
 </script>
 
 </body>
 </html>
+
 
