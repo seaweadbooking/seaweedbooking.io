@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Book My Seaweed</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #e6f7f4;
+      text-align: center;
+      padding: 40px;
+    }
+
+    h1 {
+      color: #0a5c5a;
+    }
+
+    .calendar {
+      display: flex;
+      justify-content: center;
+      gap: 30px;
+      margin-top: 40px;
+    }
+
+    .day {
+      background: white;
+      padding: 25px;
+      border-radius: 12px;
+      width: 200px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+
+    .day h2 {
+      color: #0a5c5a;
+    }
+
+    button {
+      background-color: #0a5c5a;
+      color: white;
+      border: none;
+      padding: 10px 18px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+
+    button:hover {
+      background-color: #08706d;
+    }
+
+    #message {
+      margin-top: 30px;
+      font-size: 18px;
+      color: #0a5c5a;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>🌊 Book My Seaweed</h1>
+  <p>Select an available day to book</p>
+
+  <div class="calendar">
+    <div class="day">
+      <h2>Tuesday</h2>
+      <p>Available</p>
+      <button onclick="book('Tuesday')">Book</button>
+    </div>
+
+    <div class="day">
+      <h2>Thursday</h2>
+      <p>Available</p>
+      <button onclick="book('Thursday')">Book</button>
+    </div>
+  </div>
+
+  <div id="message"></div>
+
+  <script>
+    function book(day) {
+      document.getElementById("message").innerText =
+        "✅ Your seaweed has been booked for " + day + "!";
+    }
+  </script>
+
+</body>
+</html>
