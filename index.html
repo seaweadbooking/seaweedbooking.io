@@ -14,10 +14,14 @@
     .box {
       background: white;
       padding: 30px;
-      max-width: 360px;
+      max-width: 380px;
       margin: auto;
       border-radius: 12px;
       box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+
+    h1, h2 {
+      color: #0a5c5a;
     }
 
     input {
@@ -28,18 +32,23 @@
     }
 
     button {
-      padding: 10px 18px;
+      padding: 12px 20px;
       font-size: 16px;
       background-color: #0a5c5a;
       color: white;
       border: none;
       border-radius: 6px;
       cursor: pointer;
-      margin: 5px;
+      margin: 8px 0;
+      width: 95%;
     }
 
     button:hover {
       background-color: #08706d;
+    }
+
+    .secondary {
+      background-color: #555;
     }
 
     .hidden {
@@ -55,11 +64,9 @@
   <input id="loginUser" placeholder="Username">
   <input id="loginPass" type="password" placeholder="Password">
   <button onclick="login()">Login</button>
+
+  <button onclick="showSignup()">➕ Create an Account</button>
   <p id="loginError" style="color:red;"></p>
-  <p>
-    No account?
-    <button onclick="showSignup()">Sign Up</button>
-  </p>
 </div>
 
 <!-- SIGN UP -->
@@ -68,44 +75,44 @@
   <input id="signupUser" placeholder="Username">
   <input id="signupPass" type="password" placeholder="Password">
   <button onclick="signup()">Create Account</button>
+
+  <button class="secondary" onclick="showLogin()">⬅ Back to Login</button>
   <p id="signupError" style="color:red;"></p>
-  <p>
-    Already have an account?
-    <button onclick="showLogin()">Login</button>
-  </p>
 </div>
 
-<!-- WEBSITE -->
+<!-- MAIN SITE -->
 <div id="site" class="hidden">
   <h1>🌊 Book My Seaweed</h1>
-  <p>Welcome, <span id="user"></span>!</p>
+  <p>Welcome, <strong><span id="user"></span></strong>!</p>
 
   <button onclick="book('Tuesday')">Book Tuesday</button>
   <button onclick="book('Thursday')">Book Thursday</button>
 
-  <p id="message"></p>
+  <p id="message" style="font-weight:bold;"></p>
   <br>
-  <button onclick="logout()">Logout</button>
+
+  <button class="secondary" onclick="logout()">Logout</button>
 </div>
 
 <script>
   let users = JSON.parse(localStorage.getItem("users")) || {};
 
-  if (localStorage.getItem("loggedInUser")) {
-    showSite(localStorage.getItem("loggedInUser"));
+  const loggedUser = localStorage.getItem("loggedInUser");
+  if (loggedUser) {
+    showSite(loggedUser);
   }
 
   function signup() {
-    const u = document.getElementById("signupUser").value;
-    const p = document.getElementById("signupPass").value;
+    const u = document.getElementById("signupUser").value.trim();
+    const p = document.getElementById("signupPass").value.trim();
 
     if (!u || !p) {
-      document.getElementById("signupError").innerText = "Fill all fields";
+      document.getElementById("signupError").innerText = "Please fill all fields";
       return;
     }
 
     if (users[u]) {
-      document.getElementById("signupError").innerText = "User already exists";
+      document.getElementById("signupError").innerText = "Username already exists";
       return;
     }
 
@@ -116,14 +123,14 @@
   }
 
   function login() {
-    const u = document.getElementById("loginUser").value;
-    const p = document.getElementById("loginPass").value;
+    const u = document.getElementById("loginUser").value.trim();
+    const p = document.getElementById("loginPass").value.trim();
 
     if (users[u] && users[u] === p) {
       localStorage.setItem("loggedInUser", u);
       showSite(u);
     } else {
-      document.getElementById("loginError").innerText = "Invalid login";
+      document.getElementById("loginError").innerText = "Invalid username or password";
     }
   }
 
@@ -151,9 +158,10 @@
 
   function book(day) {
     document.getElementById("message").innerText =
-      "✅ Seaweed booked for " + day;
+      "✅ Seaweed booked for " + day + "!";
   }
 </script>
 
 </body>
 </html>
+
