@@ -4,10 +4,9 @@
   <meta charset="UTF-8">
   <title>Book My Seaweed</title>
 
-  <!-- Firebase SDKs (COMPAT – REQUIRED for GitHub Pages) -->
+  <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
   <style>
     body {
@@ -19,80 +18,89 @@
 
     .box {
       background: white;
-      padding: 30px;
+      padding: 25px;
       max-width: 420px;
       margin: auto;
-      border-radius: 12px;
+      border-radius: 10px;
       box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-    }
-
-    h1, h2 {
-      color: #0a5c5a;
     }
 
     input, button {
       width: 95%;
       padding: 12px;
-      margin: 10px 0;
+      margin: 8px 0;
       font-size: 16px;
     }
 
     button {
-      background-color: #0a5c5a;
+      background: #0a5c5a;
       color: white;
       border: none;
       border-radius: 6px;
       cursor: pointer;
     }
 
-    button:hover {
-      background-color: #08706d;
+    button.secondary {
+      background: #555;
     }
 
     .hidden {
       display: none;
+    }
+
+    h2 {
+      color: #0a5c5a;
     }
   </style>
 </head>
 <body>
 
 <!-- LOGIN -->
-<div id="login" class="box">
+<div id="loginBox" class="box">
   <h2>Login</h2>
-  <button onclick="googleLogin()">🔐 Continue with Google</button>
+
+  <input id="loginEmail" type="email" placeholder="Email">
+  <input id="loginPassword" type="password" placeholder="Password">
+
+  <button onclick="loginEmail()">Login</button>
+
+  <hr>
+
+  <button onclick="loginGoogle()">Continue with Google</button>
+
+  <p>Don't have an account?</p>
+  <button class="secondary" onclick="showSignup()">Create Account</button>
 </div>
 
-<!-- EMAIL + NOTIFICATION -->
-<div id="details" class="box hidden">
-  <h2>Confirm Your Details</h2>
+<!-- SIGN UP -->
+<div id="signupBox" class="box hidden">
+  <h2>Create Account</h2>
 
-  <input id="email" type="email" placeholder="Email address (required)">
+  <input id="signupName" type="text" placeholder="Full Name">
+  <input id="signupEmail" type="email" placeholder="Email">
+  <input id="signupPassword" type="password" placeholder="Password">
 
-  <label>
-    <input type="checkbox" id="notify">
-    Send Notification About Seaweed Booking
-  </label>
+  <button onclick="signup()">Sign Up</button>
 
-  <br><br>
-  <button onclick="saveDetails()">Continue</button>
+  <p>Already have an account?</p>
+  <button class="secondary" onclick="showLogin()">Back to Login</button>
 </div>
 
 <!-- MAIN SITE -->
-<div id="site" class="hidden">
-  <h1>🌊 Book My Seaweed</h1>
-  <p><strong>Email:</strong> <span id="userEmail"></span></p>
+<div id="site" class="box hidden">
+  <h2>🌊 Book My Seaweed</h2>
+  <p id="welcome"></p>
 
   <button onclick="book('Tuesday')">Book Tuesday</button>
   <button onclick="book('Thursday')">Book Thursday</button>
 
-  <p id="message" style="font-weight:bold;"></p>
+  <p id="message"></p>
 
-  <br>
-  <button onclick="logout()">Logout</button>
+  <button class="secondary" onclick="logout()">Logout</button>
 </div>
 
 <script>
-  // 🔥 Firebase configuration
+  // 🔥 Firebase config
   const firebaseConfig = {
     apiKey: "AIzaSyA4txYmTD_fOvcMBmwZxWJfGn4TZFMZARM",
     authDomain: "fir-969c9.firebaseapp.com",
@@ -101,79 +109,67 @@
     appId: "1:204881578678:web:153f8349b5774bcfe97417"
   };
 
-  // Initialize Firebase
   firebase.initializeApp(firebaseConfig);
   const auth = firebase.auth();
-  const db = firebase.firestore();
 
-  let currentUser = null;
-
-  // ✅ Handle redirect login result
-  auth.getRedirectResult()
-    .catch(error => {
-      alert("Login error: " + error.message);
-    });
-
-  // ✅ Auth state listener (controls UI correctly)
-  auth.onAuthStateChanged(user => {
-    if (user) {
-      currentUser = user;
-      document.getElementById("login").classList.add("hidden");
-      checkUserDetails();
-    } else {
-      document.getElementById("login").classList.remove("hidden");
-      document.getElementById("details").classList.add("hidden");
-      document.getElementById("site").classList.add("hidden");
-    }
-  });
-
-  // ✅ Google login (REDIRECT – reliable)
-  function googleLogin() {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    auth.signInWithRedirect(provider);
+  // UI helpers
+  function showSignup() {
+    loginBox.classList.add("hidden");
+    signupBox.classList.remove("hidden");
   }
 
-  // Check if user already saved email
-  function checkUserDetails() {
-    db.collection("users").doc(currentUser.uid).get()
-      .then(doc => {
-        if (doc.exists) {
-          showSite(doc.data().email);
-        } else {
-          document.getElementById("details").classList.remove("hidden");
-        }
-      });
+  function showLogin() {
+    signupBox.classList.add("hidden");
+    loginBox.classList.remove("hidden");
   }
 
-  // Save email + notification preference
-  function saveDetails() {
-    const email = document.getElementById("email").value.trim();
-    const notify = document.getElementById("notify").checked;
+  // Email login
+  function loginEmail() {
+    auth.signInWithEmailAndPassword(
+      loginEmail.value,
+      loginPassword.value
+    ).catch(err => alert(err.message));
+  }
 
-    if (!email) {
-      alert("Email is required");
+  // Signup
+  function signup() {
+    if (!signupName.value) {
+      alert("Name required");
       return;
     }
 
-    db.collection("users").doc(currentUser.uid).set({
-      email: email,
-      notify: notify
-    }).then(() => {
-      showSite(email);
-    });
+    auth.createUserWithEmailAndPassword(
+      signupEmail.value,
+      signupPassword.value
+    ).then(result => {
+      result.user.updateProfile({
+        displayName: signupName.value
+      });
+    }).catch(err => alert(err.message));
   }
 
-  // Show main site
-  function showSite(email) {
-    document.getElementById("details").classList.add("hidden");
-    document.getElementById("site").classList.remove("hidden");
-    document.getElementById("userEmail").innerText = email;
+  // Google login (optional)
+  function loginGoogle() {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    auth.signInWithPopup(provider)
+      .catch(() => alert("Google login blocked by browser"));
   }
+
+  // Auth state
+  auth.onAuthStateChanged(user => {
+    if (user) {
+      loginBox.classList.add("hidden");
+      signupBox.classList.add("hidden");
+      site.classList.remove("hidden");
+
+      welcome.innerText =
+        "Welcome, " + (user.displayName || user.email);
+    }
+  });
 
   // Booking
   function book(day) {
-    document.getElementById("message").innerText =
-      "✅ Seaweed booked for " + day + "!";
+    message.innerText = "✅ Seaweed booked for " + day;
   }
 
   // Logout
@@ -184,6 +180,7 @@
 
 </body>
 </html>
+
 
 
 
