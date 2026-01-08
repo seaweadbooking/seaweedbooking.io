@@ -8,19 +8,18 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <style>
 body { font-family: Arial; background: #e6f7f4; text-align:center; padding:40px;}
-.box { background:white; padding:25px; max-width:500px; margin:auto; border-radius:10px; box-shadow:0 4px 10px rgba(0,0,0,0.1);}
+.box { background:white; padding:25px; max-width:600px; margin:auto; border-radius:10px; box-shadow:0 4px 10px rgba(0,0,0,0.1);}
 input, button { width:95%; padding:12px; margin:8px 0; font-size:16px;}
 button { background:#0a5c5a; color:white; border:none; border-radius:6px; cursor:pointer;}
 button.secondary { background:#555;}
 .hidden{ display:none;}
 table{ width:100%; border-collapse:collapse; margin-top:15px;}
-table, th, td{ border:1px solid #0a5c5a; padding:8px;}
+table, th, td{ border:1px solid #0a5c5a; padding:8px; text-align:center;}
 th{ background:#0a5c5a; color:white;}
 </style>
 </head>
 <body>
 
-<!-- SIGN UP / LOGIN -->
 <div id="authBox" class="box">
 <h2>Sign Up / Login</h2>
 
@@ -41,16 +40,17 @@ th{ background:#0a5c5a; color:white;}
 <button onclick="loginGoogle()">Login with Google</button>
 </div>
 
-<!-- MAIN SITE -->
 <div id="site" class="box hidden">
 <h2>Book My Seaweed</h2>
 <p id="welcome"></p>
 
-<h3>Booking Table</h3>
+<h3>Weekly Booking Table</h3>
 <table>
-<tr><th>Day</th><th>Booked By</th><th>Action</th></tr>
-<tr><td>Tuesday</td><td id="tuesdaySlot">Available</td><td><button onclick="bookDay('Tuesday')">Book</button></td></tr>
-<tr><td>Thursday</td><td id="thursdaySlot">Available</td><td><button onclick="bookDay('Thursday')">Book</button></td></tr>
+<tr><th>Tuesday</th><th>Thursday</th></tr>
+<tr>
+<td id="tuesdaySlot">Available<br><button onclick="bookDay('Tuesday')">Book</button></td>
+<td id="thursdaySlot">Available<br><button onclick="bookDay('Thursday')">Book</button></td>
+</tr>
 </table>
 
 <p id="message" style="font-weight:bold; margin-top:15px;"></p>
@@ -78,50 +78,71 @@ const auth = firebase.auth();
 const db = firebase.firestore();
 let currentUser = null;
 
-// ===== SIGN UP =====
+// ===== UTILITY: RESET BOOKINGS EVERY WEEK =====
+async function resetIfNewWeek(){
+  const now = new Date();
+  const currentWeek = getWeekNumber(now);
+  const weekDoc = db.collection("week").doc("current");
+  const doc = await weekDoc.get();
+  if(!doc.exists || doc.data().week!==currentWeek){
+    // Clear bookings
+    const bookings = await db.collection("bookings").get();
+    bookings.forEach(b => b.ref.delete());
+    // Update week
+    weekDoc.set({week: currentWeek});
+  }
+}
+function getWeekNumber(d){
+  const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const dayNum = date.getUTCDay() || 7;
+  date.setUTCDate(date.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(date.getUTCFullYear(),0,1));
+  return Math.ceil((((date - yearStart) / 86400000) + 1)/7);
+}
+
+// ===== SIGN UP / LOGIN =====
 function signupEmail(){
-  const name = document.getElementById("signupName").value.trim();
-  const email = document.getElementById("signupEmail").value.trim();
-  const password = document.getElementById("signupPassword").value;
-  if(!name || !email || !password){ alert("All fields required"); return; }
+  const name=document.getElementById("signupName").value.trim();
+  const email=document.getElementById("signupEmail").value.trim();
+  const password=document.getElementById("signupPassword").value;
+  if(!name||!email||!password){ alert("All fields required"); return; }
   auth.createUserWithEmailAndPassword(email,password)
       .then(res=>res.user.updateProfile({displayName:name}))
       .catch(err=>alert(err.message));
 }
 
 function signupGoogle(){
-  const name = document.getElementById("signupName").value.trim();
+  const name=document.getElementById("signupName").value.trim();
   if(!name){ alert("Type your name first"); return; }
-  const provider = new firebase.auth.GoogleAuthProvider();
+  const provider=new firebase.auth.GoogleAuthProvider();
   auth.signInWithPopup(provider)
       .then(result=>{
-        const user = result.user;
+        const user=result.user;
         if(!user.email){ alert("Google account missing email!"); return; }
         user.updateProfile({displayName:name});
       }).catch(err=>alert(err.message));
 }
 
-// ===== LOGIN =====
 function loginEmail(){
   const email=document.getElementById("loginEmail").value.trim();
   const password=document.getElementById("loginPassword").value;
-  if(!email || !password){ alert("Enter login credentials"); return; }
-  auth.signInWithEmailAndPassword(email,password).catch(err=>alert(err.message));
-}
-
-function loginGoogle(){
-  const provider = new firebase.auth.GoogleAuthProvider();
-  auth.signInWithPopup(provider)
+  if(!email||!password){ alert("Enter login credentials"); return; }
+  auth.signInWithEmailAndPassword(email,password)
       .catch(err=>alert(err.message));
 }
 
-// ===== AUTH STATE =====
-auth.onAuthStateChanged(user=>{
+function loginGoogle(){
+  const provider=new firebase.auth.GoogleAuthProvider();
+  auth.signInWithPopup(provider).catch(err=>alert(err.message));
+}
+
+auth.onAuthStateChanged(async user=>{
   if(user){
-    currentUser = user;
+    currentUser=user;
     document.getElementById("authBox").classList.add("hidden");
     document.getElementById("site").classList.remove("hidden");
-    document.getElementById("welcome").innerText = "Welcome, " + (user.displayName||user.email);
+    document.getElementById("welcome").innerText="Welcome, "+(user.displayName||user.email);
+    await resetIfNewWeek();
     loadBookings();
   } else {
     document.getElementById("authBox").classList.remove("hidden");
@@ -132,24 +153,24 @@ auth.onAuthStateChanged(user=>{
 // ===== BOOKING =====
 function loadBookings(){
   db.collection("bookings").orderBy("time","asc").limit(8).onSnapshot(snapshot=>{
-    const log = document.getElementById("bookingLog");
-    log.innerHTML = "";
     let tuesdayBooked=false, thursdayBooked=false;
+    const log=document.getElementById("bookingLog");
+    log.innerHTML="";
     snapshot.docs.forEach((doc,index)=>{
-      const data = doc.data();
-      const displayName = data.name || data.email;
-      log.innerHTML += `<tr><td>${index+1}</td><td>${displayName}</td><td>${data.day}</td></tr>`;
-      if(data.day==="Tuesday"){ tuesdayBooked=true; document.getElementById("tuesdaySlot").innerText=displayName; }
-      if(data.day==="Thursday"){ thursdayBooked=true; document.getElementById("thursdaySlot").innerText=displayName; }
+      const data=doc.data();
+      const displayName=data.name||data.email;
+      log.innerHTML+=`<tr><td>${index+1}</td><td>${displayName}</td><td>${data.day}</td></tr>`;
+      if(data.day==="Tuesday"){ tuesdayBooked=true; document.getElementById("tuesdaySlot").innerHTML=displayName+"<br><button disabled>Booked</button>"; }
+      if(data.day==="Thursday"){ thursdayBooked=true; document.getElementById("thursdaySlot").innerHTML=displayName+"<br><button disabled>Booked</button>"; }
     });
-    if(!tuesdayBooked) document.getElementById("tuesdaySlot").innerText="Available";
-    if(!thursdayBooked) document.getElementById("thursdaySlot").innerText="Available";
+    if(!tuesdayBooked) document.getElementById("tuesdaySlot").innerHTML="Available<br><button onclick=\"bookDay('Tuesday')\">Book</button>";
+    if(!thursdayBooked) document.getElementById("thursdaySlot").innerHTML="Available<br><button onclick=\"bookDay('Thursday')\">Book</button>";
   });
 }
 
 function bookDay(day){
   if(!currentUser){ alert("Login first"); return; }
-  const name=currentUser.displayName || currentUser.email;
+  const name=currentUser.displayName||currentUser.email;
   db.collection("bookings").get().then(snapshot=>{
     if(snapshot.size>=8){ alert("Booking limit reached"); return; }
     const alreadyBooked = snapshot.docs.some(doc=>doc.data().day===day);
@@ -167,3 +188,4 @@ function logout(){ auth.signOut().then(()=>location.reload()); }
 </script>
 </body>
 </html>
+
