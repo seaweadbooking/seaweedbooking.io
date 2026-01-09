@@ -4,94 +4,50 @@
 <meta charset="UTF-8">
 <title>Seaweed Booking</title>
 
-<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
 <style>
-body {
-  font-family: Arial;
-  background: #e6f7f4;
-  padding: 30px;
-  text-align: center;
-}
-.box {
-  background: white;
-  max-width: 600px;
-  margin: auto;
-  padding: 25px;
-  border-radius: 10px;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-}
-input, button {
-  width: 95%;
-  padding: 12px;
-  margin: 6px 0;
-  font-size: 16px;
-}
-button {
-  background: #0a5c5a;
-  color: white;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-}
-button.secondary {
-  background: #555;
-}
-.hidden {
-  display: none;
-}
-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 15px;
-}
-th, td {
-  border: 1px solid #0a5c5a;
-  padding: 8px;
-}
-th {
-  background: #0a5c5a;
-  color: white;
-}
+body { font-family: Arial; background:#e6f7f4; padding:30px; text-align:center; }
+.box { background:white; max-width:600px; margin:auto; padding:25px; border-radius:10px; }
+input,button { width:95%; padding:12px; margin:6px 0; font-size:16px; }
+button { background:#0a5c5a; color:white; border:none; border-radius:6px; }
+.hidden { display:none; }
+table { width:100%; border-collapse:collapse; margin-top:15px; }
+th,td { border:1px solid #0a5c5a; padding:8px; }
+th { background:#0a5c5a; color:white; }
 </style>
 </head>
 
 <body>
 
-<!-- AUTH -->
 <div id="authBox" class="box">
 <h2>Sign Up</h2>
-<input id="name" placeholder="Full Name">
-<input id="email" type="email" placeholder="Email">
+<input id="name" placeholder="Name">
 <input id="password" type="password" placeholder="Password">
-<button onclick="signupEmail()">Sign Up with Email</button>
-<button onclick="signupGoogle()">Sign Up with Google</button>
+<button onclick="signup()">Sign Up</button>
 
 <hr>
 
 <h2>Login</h2>
-<input id="loginEmail" type="email" placeholder="Email">
+<input id="loginName" placeholder="Name">
 <input id="loginPassword" type="password" placeholder="Password">
-<button onclick="loginEmail()">Login with Email</button>
-<button onclick="loginGoogle()">Login with Google</button>
+<button onclick="login()">Login</button>
 </div>
 
-<!-- SITE -->
 <div id="site" class="box hidden">
 <h2>Seaweed Booking</h2>
 <p id="welcome"></p>
 
-<h3>Tuesday Bookings</h3>
+<h3>Tuesday</h3>
 <table>
 <tr><th>#</th><th>Name</th></tr>
 <tbody id="tuesdayTable"></tbody>
 </table>
 <button onclick="book('Tuesday')">Book Tuesday</button>
 
-<h3>Thursday Bookings</h3>
+<h3>Thursday</h3>
 <table>
 <tr><th>#</th><th>Name</th></tr>
 <tbody id="thursdayTable"></tbody>
@@ -99,126 +55,98 @@ th {
 <button onclick="book('Thursday')">Book Thursday</button>
 
 <p id="message"></p>
-
-<br>
-<button class="secondary" onclick="logout()">Logout</button>
+<button onclick="logout()">Logout</button>
 </div>
 
 <script>
-/* FIREBASE CONFIG */
 const firebaseConfig = {
   apiKey: "AIzaSyA4txYmTD_fOvcMBmwZxWJfGn4TZFMZARM",
   authDomain: "fir-969c9.firebaseapp.com",
-  projectId: "fir-969c9",
-  messagingSenderId: "204881578678",
-  appId: "1:204881578678:web:153f8349b5774bcfe97417"
+  projectId: "fir-969c9"
 };
 
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-let currentUser = null;
 const MAX_SLOTS = 8;
+let currentUser = null;
 
-/* AUTH FUNCTIONS */
-function signupEmail() {
-  const name = nameInput();
-  const email = emailInput();
-  const password = passwordInput();
-  if (!name || !email || !password) return alert("All fields required");
+// Convert name → hidden email
+function makeEmail(name) {
+  return name.toLowerCase().replace(/\s+/g,"") + "@seaweed.local";
+}
+
+// SIGN UP
+function signup() {
+  const name = document.getElementById("name").value.trim();
+  const password = document.getElementById("password").value;
+  if (!name || !password) return alert("Fill all fields");
+
+  const email = makeEmail(name);
 
   auth.createUserWithEmailAndPassword(email, password)
     .then(res => res.user.updateProfile({ displayName: name }))
     .catch(err => alert(err.message));
 }
 
-function signupGoogle() {
-  const name = nameInput();
-  if (!name) return alert("Type your name first");
+// LOGIN
+function login() {
+  const name = document.getElementById("loginName").value.trim();
+  const password = document.getElementById("loginPassword").value;
+  if (!name || !password) return alert("Fill all fields");
 
-  const provider = new firebase.auth.GoogleAuthProvider();
-  auth.signInWithPopup(provider)
-    .then(res => res.user.updateProfile({ displayName: name }))
-    .catch(err => alert(err.message));
-}
-
-function loginEmail() {
-  auth.signInWithEmailAndPassword(
-    document.getElementById("loginEmail").value,
-    document.getElementById("loginPassword").value
-  ).catch(err => alert(err.message));
-}
-
-function loginGoogle() {
-  const provider = new firebase.auth.GoogleAuthProvider();
-  auth.signInWithPopup(provider).catch(err => alert(err.message));
+  auth.signInWithEmailAndPassword(makeEmail(name), password)
+    .catch(err => alert("Wrong name or password"));
 }
 
 function logout() {
   auth.signOut();
 }
 
-/* AUTH STATE */
+// AUTH STATE
 auth.onAuthStateChanged(user => {
   if (user) {
     currentUser = user;
     authBox.classList.add("hidden");
     site.classList.remove("hidden");
-    welcome.innerText = "Welcome, " + (user.displayName || user.email);
-    loadTables();
+    welcome.innerText = "Welcome, " + user.displayName;
+    loadDay("Tuesday","tuesdayTable");
+    loadDay("Thursday","thursdayTable");
   } else {
     authBox.classList.remove("hidden");
     site.classList.add("hidden");
   }
 });
 
-/* BOOKINGS */
-function loadTables() {
-  loadDay("Tuesday", "tuesdayTable");
-  loadDay("Thursday", "thursdayTable");
-}
-
+// BOOKINGS
 function loadDay(day, tableId) {
   db.collection("bookings")
-    .where("day", "==", day)
-    .orderBy("time", "asc")
+    .where("day","==",day)
+    .orderBy("time","asc")
     .onSnapshot(snapshot => {
       const table = document.getElementById(tableId);
       table.innerHTML = "";
-      snapshot.forEach((doc, i) => {
+      snapshot.forEach((doc,i) => {
         table.innerHTML += `<tr><td>${i+1}</td><td>${doc.data().name}</td></tr>`;
       });
     });
 }
 
 function book(day) {
-  if (!currentUser) return alert("Login first");
-
   db.collection("bookings")
-    .where("day", "==", day)
+    .where("day","==",day)
     .get()
-    .then(snapshot => {
-      if (snapshot.size >= MAX_SLOTS) {
-        alert(day + " is fully booked");
-        return;
-      }
+    .then(snap => {
+      if (snap.size >= MAX_SLOTS) return alert(day+" full");
 
       db.collection("bookings").add({
-        day: day,
-        name: currentUser.displayName || currentUser.email,
-        email: currentUser.email,
+        day,
+        name: currentUser.displayName,
         time: firebase.firestore.FieldValue.serverTimestamp()
       });
-
-      message.innerText = "Booked for " + day;
     });
 }
-
-/* HELPERS */
-function nameInput(){ return document.getElementById("name").value.trim(); }
-function emailInput(){ return document.getElementById("email").value.trim(); }
-function passwordInput(){ return document.getElementById("password").value; }
 </script>
 </body>
 </html>
